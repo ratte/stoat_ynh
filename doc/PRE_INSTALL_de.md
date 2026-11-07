@@ -1,5 +1,5 @@
 - Stoat muss **an der Wurzel einer eigenen (Sub-)Domain** installiert werden, z. B. `chat.example.com`.
 - Es laufen rund zehn Dienste plus MongoDB, Redis und RabbitMQ. Rechne mit mindestens **2 vCPU und 2 GB RAM**.
-- MongoDB ≥ 5 braucht eine CPU mit **AVX**. Auf älteren CPUs wird stattdessen MongoDB 4.4 installiert.
+- Eine CPU mit **AVX** ist Voraussetzung: Stoat verwendet MongoDB 8.0. Ohne AVX weicht YunoHost auf MongoDB 4.4 aus, das keinen Support mehr hat, für Debian 10 gebaut ist und mit Stoat nicht getestet wurde. Prüfen mit `grep -o avx /proc/cpuinfo | head -1`.
 - Sprache und Video brauchen zwei öffentliche Ports, die automatisch in der YunoHost-Firewall geöffnet werden: **TCP 7881** und **UDP 7882** (oder die nächsten freien). Steht der Server hinter einem Router, müssen sie auch dort weitergeleitet werden.
 - Mit selbst gehosteten Instanzen funktioniert nur der **Web-Client** zuverlässig; die meisten offiziellen Mobile-/Desktop-Apps sprechen nur mit stoat.chat.

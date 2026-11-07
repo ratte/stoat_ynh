@@ -18,6 +18,33 @@ Open-source community chat platform with servers, channels, voice and video (for
 <a href="https://github.com/YunoHost-Apps/stoat_ynh/issues"><img height="100px" src="https://github.com/YunoHost/yunohost-artwork/raw/refs/heads/main/badges/neopossum-badges/badge_report_an_issue.svg"/></a>
 </div>
 
+## Overview
+
+[Stoat](https://stoat.chat) (formerly Revolt) packaged for YunoHost, running natively without Docker:
+
+- MongoDB, Redis and RabbitMQ from the system
+- [Garage](https://garagehq.deuxfleurs.fr) as S3 storage for uploads
+- [LiveKit](https://livekit.io) for voice, camera and screen sharing
+- The official Stoat binaries and web client, taken from the upstream release images (sha256-verified).
+  They are built for Debian 13, so their runtime libraries are shipped in the app's `lib/` directory
+  and only used by the Stoat binaries.
+
+**Shipped version:** 0.15.5~ynh1 · **Architectures:** amd64, arm64
+
+### Requirements
+
+- A dedicated (sub)domain: Stoat is installed at its root, e.g. `chat.example.com`
+- At least 2 vCPU and 2 GB RAM, and a CPU with AVX for MongoDB
+- Public ports for voice/video: TCP 7881 and UDP 7882 (opened in the YunoHost firewall; forward them on your router if needed)
+
+### Installation
+
+```bash
+sudo yunohost app install https://github.com/ratte/stoat_ynh
+```
+
+See [`doc/`](doc/) for pre-install notes and administration.
+
 ## 📦 Developer info
 
 [![Automatic tests level](https://apps.yunohost.org/badge/cilevel/stoat)](https://ci-apps.yunohost.org/ci/apps/stoat/)
