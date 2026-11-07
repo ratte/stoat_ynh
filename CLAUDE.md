@@ -32,7 +32,8 @@ Communicate with the user in German.
 3. MongoDB database name `revolt`; Revolt.toml keys `key`/`secret` under `[api.livekit.nodes.worldwide]`
 4. Web placeholder for video toggle `__VITE_CFG_ENABLE_VIDEO__` (inject.js source not seen); empty `__VITE_HOST__` is OK
 5. `Revolt.overrides.toml` is read in production
-6. Delta honours `ROCKET_PORT`; bonfire honours `HOST`; autumn finds ffmpeg via PATH
+6. autumn finds ffmpeg via PATH (verified: bonfire honours `HOST`; delta/autumn/january/gifbox/voice-ingress
+   hard-code 0.0.0.0:<port>, env cannot change it)
 7. `ynh_config_remove_systemd`, `ynh_redis_remove_db` take positional args in helpers 2.1
 
 ## Conventions

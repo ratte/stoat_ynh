@@ -28,6 +28,14 @@ Vagrant.configure("2") do |config|
   config.vm.provision "shell", inline: <<-SHELL
     set -eu
     export DEBIAN_FRONTEND=noninteractive
+    # Keep the clock right: a snapshot restore brings back the old time, which
+    # makes apt reject the Release files ("not valid yet")
+    if ! systemctl is-active -q systemd-timesyncd; then
+      # the clock may still be wrong here, so don't let apt check dates yet
+      apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
+      apt-get install -y systemd-timesyncd
+      timedatectl set-ntp true
+    fi
     if ! command -v yunohost >/dev/null; then
       apt-get update
       apt-get install -y curl ca-certificates
@@ -44,5 +52,16 @@ Vagrant.configure("2") do |config|
     # without this, vagrant ssh/rsync is locked out after postinstall
     usermod -aG root vagrant
     echo "YunoHost ready: stoatadmin / Stoat-Test-1234"
+  SHELL
+
+  # Also runs on `vagrant up`/`reload` and `vagrant snapshot restore`: resync the clock now
+  config.vm.provision "clock", type: "shell", run: "always", inline: <<-SHELL
+    # NTPSynchronized survives a restore, so wait for timesyncd to touch its
+    # stamp file after the restart instead
+    t=$(date +%s)
+    systemctl restart systemd-timesyncd 2>/dev/null || true
+    timeout 30 bash -c "until [ \\$(stat -c %Y /run/systemd/timesync/synchronized 2>/dev/null || echo 0) -ge $t ]; do sleep 1; done" \
+      || echo "WARNING: clock not synchronised"
+    date -u
   SHELL
 end

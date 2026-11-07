@@ -1,4 +1,7 @@
 port: __PORT_LIVEKIT__
+# Signalling is only reached through nginx (RTC ports are unaffected)
+bind_addresses:
+  - "127.0.0.1"
 
 rtc:
   use_external_ip: true

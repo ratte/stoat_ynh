@@ -259,12 +259,18 @@ _garage() {
 
 # Single-node layout, bucket and access key (idempotent)
 _stoat_setup_garage() {
-    local node i
-    for i in $(seq 1 30); do
-        node="$(_garage node id -q 2>/dev/null | cut -d@ -f1)" && [ -n "$node" ] && break
+    local node i up=0
+    # 'node id' only reads the local key; 'status' needs the RPC port to be up
+    for i in $(seq 1 60); do
+        if _garage status >/dev/null 2>&1; then
+            up=1
+            break
+        fi
         sleep 1
     done
-    [ -n "$node" ] || ynh_die "Garage did not come up"
+    [ "$up" -eq 1 ] || ynh_die "Garage did not come up"
+    node="$(_garage node id -q | cut -d@ -f1)"
+    [ -n "$node" ] || ynh_die "Could not read the Garage node id"
 
     if _garage status 2>/dev/null | grep -q "NO ROLE ASSIGNED"; then
         _garage layout assign -z dc1 -c 10G "$node"
@@ -309,8 +315,10 @@ _stoat_add_configs() {
                 svc_exec="$install_dir/bin/stoat-$unit"
                 svc_after="network.target mongod.service redis-server.service rabbitmq-server.service $app-garage.service" ;;
         esac
+        # api, autumn, january, gifbox and voice-ingress hard-code 0.0.0.0:<fixed port>
+        # upstream (ROCKET_ADDRESS is overridden too); those ports stay closed in
+        # the YunoHost firewall and are only reached through nginx.
         case "$unit" in
-            api)    svc_env="ROCKET_ADDRESS=127.0.0.1 ROCKET_PORT=$port_api" ;;
             events) svc_env="HOST=127.0.0.1:$port_events" ;;
             autumn) svc_env="PATH=$install_dir/bin:/usr/local/bin:/usr/bin:/bin" ;;
         esac
