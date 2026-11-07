@@ -1,0 +1,56 @@
+name: package_check
+
+on:
+  push:
+    branches: [main, testing]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: package_check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package_check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - name: Checkout package
+        uses: actions/checkout@v4
+        with:
+          path: stoat_ynh
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - name: Install Incus and package_check dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y incus lynx jq python3-toml python3-jinja2 python3-requests curl git
+          sudo usermod -aG incus-admin "$USER"
+          sudo incus admin init --auto
+          # Docker's iptables rules block Incus bridge traffic on GitHub runners
+          sudo iptables -I DOCKER-USER -j ACCEPT || true
+          sudo sysctl -w net.ipv4.ip_forward=1
+
+      - name: Fetch package_check
+        run: git clone --depth 1 https://github.com/YunoHost/package_check
+
+      - name: Run package_check
+        run: |
+          cd package_check
+          # default shell runs with pipefail, so a failing check fails the step
+          sg incus-admin -c "./package_check.sh ${GITHUB_WORKSPACE}/stoat_ynh" | tee ../package_check.log
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: package_check-logs
+          path: |
+            package_check.log
+            package_check/results*.json
+            package_check/logs/
+          if-no-files-found: ignore

@@ -1,0 +1,65 @@
+# Managed by YunoHost. Local changes are overwritten on upgrade;
+# put your own settings in __DATA_DIR__/Revolt.overrides.toml instead.
+
+production = true
+
+[database]
+mongodb = "mongodb://__APP__:__DB_PWD__@127.0.0.1:27017/revolt?authSource=revolt"
+redis = "redis://127.0.0.1:6379/__REDIS_DB__"
+
+[hosts]
+app = "https://__DOMAIN__"
+api = "https://__DOMAIN__/api"
+events = "wss://__DOMAIN__/ws"
+autumn = "https://__DOMAIN__/autumn"
+january = "https://__DOMAIN__/january"
+gifbox = "https://__DOMAIN__/gifbox"
+voso_legacy = ""
+voso_legacy_ws = ""
+
+[hosts.livekit]
+worldwide = "wss://__DOMAIN__/livekit"
+
+[rabbit]
+host = "127.0.0.1"
+port = 5672
+username = "__APP__"
+password = "__RABBIT_PWD__"
+
+[api.registration]
+invite_only = __INVITE_ONLY_TOML__
+
+[api.livekit.nodes.worldwide]
+url = "http://127.0.0.1:__PORT_LIVEKIT__"
+lat = 0.0
+lon = 0.0
+key = "__LIVEKIT_KEY__"
+secret = "__LIVEKIT_SECRET__"
+
+[pushd]
+production = true
+
+[pushd.vapid]
+private_key = "__VAPID_PRIVATE_KEY__"
+public_key = "__VAPID_PUBLIC_KEY__"
+
+[files]
+encryption_key = "__FILES_ENCRYPTION_KEY__"
+
+[files.s3]
+endpoint = "http://127.0.0.1:__PORT_S3__"
+path_style_buckets = true
+region = "garage"
+access_key_id = "__S3_KEY_ID__"
+secret_access_key = "__S3_SECRET_KEY__"
+default_bucket = "revolt-uploads"
+
+[features.limits.new_user]
+video = __VIDEO_TOML__
+video_resolution = [1920, 1080]
+video_aspect_ratio = [0.3, 10]
+
+[features.limits.default]
+video = __VIDEO_TOML__
+video_resolution = [1920, 1080]
+video_aspect_ratio = [0.3, 10]

@@ -1,0 +1,61 @@
+#!/bin/bash
+
+source ../settings/scripts/_common.sh
+source /usr/share/yunohost/helpers
+
+#=================================================
+# DEPENDENCIES AND DATABASES
+#=================================================
+ynh_script_progression "Reinstalling MongoDB..."
+
+ynh_install_mongo
+ynh_mongo_setup_db --db_user="$app" --db_name="revolt" --db_pwd="$db_pwd"
+
+ynh_script_progression "Restoring the database..."
+
+ynh_mongo_restore_db --database="revolt" < ./dump.bson
+
+redis_db=$(ynh_redis_get_free_db)
+ynh_app_setting_set --key=redis_db --value="$redis_db"
+
+_stoat_setup_rabbitmq
+
+#=================================================
+# APP FILES
+#=================================================
+ynh_script_progression "Downloading Stoat (this takes a while)..."
+
+_stoat_setup_sources
+_stoat_build_web
+
+ynh_script_progression "Restoring uploaded files..."
+
+ynh_restore "$data_dir"
+
+mkdir -p "/var/log/$app"
+chown -R "$app:$app" "/var/log/$app"
+chown -R "$app:www-data" "$install_dir"
+chmod 750 "$install_dir"
+chown -R "$app:$app" "$install_dir/bin" "$data_dir"
+chmod -R o-rwx "$data_dir"
+
+#=================================================
+# SYSTEM CONFIGURATION
+#=================================================
+ynh_script_progression "Restoring system configurations..."
+
+# Regenerate configs (redis db index may have changed)
+invite_only_toml="false"; [ "${invite_only:-0}" -eq 1 ] && invite_only_toml="true"
+video_toml="false"; [ "${enable_video:-1}" -eq 1 ] && video_toml="true"
+_stoat_add_configs
+
+#=================================================
+# START SERVICES
+#=================================================
+ynh_script_progression "Starting $app's services..."
+
+ynh_systemctl --service="$app-garage" --action="start"
+_stoat_setup_garage
+_stoat_systemctl_all start
+
+ynh_script_progression "Restoration completed for $app"

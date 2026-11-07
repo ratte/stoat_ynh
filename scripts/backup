@@ -1,0 +1,31 @@
+#!/bin/bash
+
+source ../settings/scripts/_common.sh
+source /usr/share/yunohost/helpers
+
+ynh_print_info "Declaring files to be backed up..."
+
+#=================================================
+# DATA: uploaded files (Garage) and Revolt.overrides.toml
+# Binaries, web client and configs are regenerated on restore.
+#=================================================
+_garage meta snapshot --all >/dev/null 2>&1 || true
+ynh_backup "$data_dir"
+
+#=================================================
+# SYSTEM CONFIGURATION
+#=================================================
+ynh_backup "/etc/nginx/conf.d/$domain.d/$app.conf"
+ynh_backup "/etc/logrotate.d/$app"
+for unit in "${stoat_units[@]}"; do
+    ynh_backup "/etc/systemd/system/$app-$unit.service"
+done
+
+#=================================================
+# DATABASE
+#=================================================
+ynh_print_info "Backing up the MongoDB database..."
+
+ynh_mongo_dump_db --database="revolt" > dump.bson
+
+ynh_print_info "Backup script completed for $app. (YunoHost will then actually copy those files to the archive)."

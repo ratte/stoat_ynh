@@ -1,0 +1,64 @@
+#!/bin/bash
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#=================================================
+# STOP SERVICES
+#=================================================
+ynh_script_progression "Stopping $app's services..."
+
+_stoat_systemctl_all stop
+
+#=================================================
+# SETTINGS
+#=================================================
+ynh_script_progression "Ensuring settings..."
+
+ynh_app_setting_set_default --key=invite_only --value=0
+ynh_app_setting_set_default --key=enable_video --value=1
+
+invite_only_toml="false"; [ "$invite_only" -eq 1 ] && invite_only_toml="true"
+video_toml="false"; [ "$enable_video" -eq 1 ] && video_toml="true"
+
+_stoat_generate_secrets
+
+ynh_install_mongo
+_stoat_setup_rabbitmq
+
+#=================================================
+# APP SOURCES
+#=================================================
+if ynh_app_upstream_version_changed || [ ! -x "$install_dir/bin/stoat-api" ]; then
+    ynh_script_progression "Upgrading Stoat (this takes a while)..."
+    _stoat_setup_sources
+fi
+_stoat_build_web
+
+mkdir -p "/var/log/$app" "$data_dir/garage/meta" "$data_dir/garage/data"
+chown -R "$app:$app" "/var/log/$app"
+chown -R "$app:www-data" "$install_dir"
+chmod 750 "$install_dir"
+chown -R "$app:$app" "$install_dir/bin" "$data_dir"
+chmod -R o-rwx "$data_dir"
+
+#=================================================
+# CONFIGURATION
+#=================================================
+ynh_script_progression "Updating configuration..."
+
+_stoat_add_configs
+
+#=================================================
+# START SERVICES
+#=================================================
+ynh_script_progression "Starting $app's services..."
+
+ynh_systemctl --service="$app-garage" --action="start"
+_stoat_setup_garage
+_stoat_systemctl_all start
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+ynh_script_progression "Upgrade of $app completed"

@@ -1,0 +1,31 @@
+#!/bin/bash
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+if [ "$new_path" != "/" ]; then
+    ynh_die "Stoat must be installed at the root of a domain (path '/')."
+fi
+
+ynh_script_progression "Stopping $app's services..."
+
+_stoat_systemctl_all stop
+
+ynh_script_progression "Updating configuration..."
+
+ynh_change_url_nginx_config
+
+domain="$new_domain"
+invite_only_toml="false"; [ "${invite_only:-0}" -eq 1 ] && invite_only_toml="true"
+video_toml="false"; [ "${enable_video:-1}" -eq 1 ] && video_toml="true"
+
+_stoat_build_web
+ynh_config_add --template="Revolt.toml" --destination="$install_dir/Revolt.toml"
+chown "$app:$app" "$install_dir/Revolt.toml"
+chmod 400 "$install_dir/Revolt.toml"
+
+ynh_script_progression "Starting $app's services..."
+
+_stoat_systemctl_all start
+
+ynh_script_progression "Change of URL completed for $app"

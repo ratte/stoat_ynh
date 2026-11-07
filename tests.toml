@@ -1,0 +1,11 @@
+#:schema https://raw.githubusercontent.com/YunoHost/apps/master/schemas/tests.v1.schema.json
+
+test_format = 1.0
+
+[default]
+
+    # Stoat needs a dedicated (sub)domain and fixed ports
+    exclude = ["change_url"]
+
+    args.invite_only = 0
+    args.enable_video = 1

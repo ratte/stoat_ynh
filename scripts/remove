@@ -1,0 +1,35 @@
+#!/bin/bash
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#=================================================
+# REMOVE SYSTEM CONFIGURATIONS
+#=================================================
+ynh_script_progression "Removing system configurations related to $app..."
+
+_stoat_remove_units
+
+ynh_config_remove_nginx
+ynh_config_remove_logrotate
+
+#=================================================
+# REMOVE DATABASES AND BROKER USER
+#=================================================
+ynh_script_progression "Removing databases..."
+
+ynh_mongo_remove_db --db_user="$app" --db_name="revolt"
+ynh_remove_mongo
+
+ynh_redis_remove_db "$redis_db"
+
+if command -v rabbitmqctl >/dev/null && rabbitmqctl -q list_users 2>/dev/null | awk '{print $1}' | grep -qx "$app"; then
+    rabbitmqctl -q delete_user "$app"
+fi
+
+ynh_safe_rm "/var/log/$app"
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+ynh_script_progression "Removal of $app completed"

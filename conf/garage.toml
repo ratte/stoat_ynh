@@ -1,0 +1,14 @@
+metadata_dir = "__DATA_DIR__/garage/meta"
+data_dir = "__DATA_DIR__/garage/data"
+db_engine = "lmdb"
+metadata_auto_snapshot_interval = "6h"
+
+replication_factor = 1
+
+rpc_bind_addr = "127.0.0.1:__PORT_S3RPC__"
+rpc_public_addr = "127.0.0.1:__PORT_S3RPC__"
+rpc_secret = "__GARAGE_RPC_SECRET__"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "127.0.0.1:__PORT_S3__"

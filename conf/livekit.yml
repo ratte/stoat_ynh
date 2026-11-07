@@ -1,0 +1,24 @@
+port: __PORT_LIVEKIT__
+
+rtc:
+  use_external_ip: true
+  tcp_port: __PORT_RTCTCP__
+  udp_port: __PORT_RTCUDP__
+
+redis:
+  address: 127.0.0.1:6379
+  db: __REDIS_DB__
+
+turn:
+  enabled: false
+
+keys:
+  __LIVEKIT_KEY__: __LIVEKIT_SECRET__
+
+webhook:
+  api_key: __LIVEKIT_KEY__
+  urls:
+    - "http://127.0.0.1:__PORT_INGRESS__/worldwide"
+
+logging:
+  level: info

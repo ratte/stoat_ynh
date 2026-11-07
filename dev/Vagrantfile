@@ -1,0 +1,45 @@
+# YunoHost 12 test machine for stoat_ynh
+#
+#   cd dev && vagrant up                 # first run: ~15 min
+#   vagrant snapshot save clean          # once, right after provisioning
+#   vagrant snapshot restore clean       # reset before each test run
+#   vagrant ssh -c "sudo yunohost app install /stoat_ynh -a 'domain=chat.stoat.test&init_main_permission=visitors&invite_only=0&enable_video=1' --force"
+#
+# Add to your hosts file to open it in the browser (self-signed cert):
+#   192.168.56.20  stoat.test chat.stoat.test
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "debian/bookworm64"
+  config.vm.hostname = "stoat-test"
+  config.vm.network "private_network", ip: "192.168.56.20"
+
+  # The package directory is mounted read-only into the VM
+  config.vm.synced_folder "..", "/stoat_ynh", type: "rsync",
+    rsync__exclude: [".git/", "dev/.vagrant/"]
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = "stoat-ynh-test"
+    vb.memory = 4096
+    vb.cpus = 2
+    # MongoDB >= 5 needs AVX inside the guest
+    vb.customize ["modifyvm", :id, "--cpu-profile", "host"]
+  end
+
+  config.vm.provision "shell", inline: <<-SHELL
+    set -eu
+    export DEBIAN_FRONTEND=noninteractive
+    if ! command -v yunohost >/dev/null; then
+      apt-get update
+      apt-get install -y curl ca-certificates
+      curl -fsSL https://install.yunohost.org | bash -s -- -a
+    fi
+    if ! yunohost domain list --output-as json | grep -q '"stoat.test"'; then
+      yunohost tools postinstall --domain stoat.test --username admin \
+        --fullname "Test Admin" --password 'Stoat-Test-1234' \
+        --ignore-dyndns --force-diskspace
+    fi
+    yunohost domain list --output-as json | grep -q '"chat.stoat.test"' \
+      || yunohost domain add chat.stoat.test
+    echo "YunoHost ready: admin / Stoat-Test-1234"
+  SHELL
+end

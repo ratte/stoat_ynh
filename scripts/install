@@ -1,0 +1,72 @@
+#!/bin/bash
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#=================================================
+# SETTINGS
+#=================================================
+ynh_script_progression "Storing settings..."
+
+ynh_app_setting_set --key=invite_only --value="$invite_only"
+ynh_app_setting_set --key=enable_video --value="$enable_video"
+
+invite_only_toml="false"; [ "$invite_only" -eq 1 ] && invite_only_toml="true"
+video_toml="false"; [ "$enable_video" -eq 1 ] && video_toml="true"
+
+_stoat_generate_secrets
+
+#=================================================
+# DEPENDENCIES: MONGODB, REDIS, RABBITMQ
+#=================================================
+ynh_script_progression "Installing MongoDB..."
+
+ynh_install_mongo
+
+ynh_script_progression "Creating databases and broker user..."
+
+ynh_mongo_setup_db --db_user="$app" --db_name="revolt"
+
+redis_db=$(ynh_redis_get_free_db)
+ynh_app_setting_set --key=redis_db --value="$redis_db"
+
+_stoat_setup_rabbitmq
+
+#=================================================
+# APP SOURCES
+#=================================================
+ynh_script_progression "Downloading Stoat (this takes a while)..."
+
+_stoat_setup_sources
+_stoat_build_web
+
+mkdir -p "/var/log/$app" "$data_dir/garage/meta" "$data_dir/garage/data"
+chown -R "$app:$app" "/var/log/$app"
+chown -R "$app:www-data" "$install_dir"
+chmod 750 "$install_dir"
+chown -R "$app:$app" "$install_dir/bin" "$data_dir"
+chmod -R o-rwx "$data_dir"
+
+#=================================================
+# CONFIGURATION
+#=================================================
+ynh_script_progression "Adding configuration files..."
+
+_stoat_add_configs
+
+#=================================================
+# START SERVICES
+#=================================================
+ynh_script_progression "Starting object storage..."
+
+ynh_systemctl --service="$app-garage" --action="start"
+_stoat_setup_garage
+
+ynh_script_progression "Starting Stoat services..."
+
+_stoat_systemctl_all start
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+ynh_script_progression "Installation of $app completed"

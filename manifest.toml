@@ -1,0 +1,96 @@
+#:schema https://raw.githubusercontent.com/YunoHost/apps/master/schemas/manifest.v2.schema.json
+
+packaging_format = 2
+
+id = "stoat"
+name = "Stoat"
+description.en = "Open-source community chat platform with servers, channels, voice and video (formerly Revolt)"
+description.fr = "Plateforme de discussion communautaire libre avec serveurs, salons, voix et vidéo (anciennement Revolt)"
+description.de = "Quelloffene Community-Chatplattform mit Servern, Kanälen, Sprache und Video (ehemals Revolt)"
+
+version = "0.15.5~ynh1"
+
+maintainers = []
+
+[upstream]
+license = "AGPL-3.0-only"
+website = "https://stoat.chat"
+admindoc = "https://github.com/stoatchat/self-hosted"
+userdoc = "https://developers.stoat.chat"
+code = "https://github.com/stoatchat/stoatchat"
+
+[integration]
+yunohost = ">= 12.0.9"
+helpers_version = "2.1"
+architectures = ["amd64", "arm64"]
+multi_instance = false
+ldap = false
+sso = false
+disk = "2G"
+ram.build = "500M"
+ram.runtime = "1500M"
+
+[install]
+    [install.domain]
+    # Stoat must be installed at the root of a dedicated (sub)domain
+    type = "domain"
+
+    [install.init_main_permission]
+    type = "group"
+    default = "visitors"
+
+    [install.invite_only]
+    ask.en = "Require an invite code to register?"
+    ask.fr = "Exiger un code d'invitation pour s'inscrire ?"
+    ask.de = "Einladungscode für die Registrierung verlangen?"
+    help.en = "Invite codes have to be created by the admin in the database (see the admin documentation)."
+    help.fr = "Les codes d'invitation doivent être créés par l'admin dans la base de données (voir la documentation admin)."
+    help.de = "Einladungscodes muss der Admin in der Datenbank anlegen (siehe Admin-Dokumentation)."
+    type = "boolean"
+    default = false
+
+    [install.enable_video]
+    ask.en = "Enable camera and screen sharing in voice channels?"
+    ask.fr = "Activer la caméra et le partage d'écran dans les salons vocaux ?"
+    ask.de = "Kamera und Bildschirmfreigabe in Sprachkanälen aktivieren?"
+    type = "boolean"
+    default = true
+
+[resources]
+    [resources.system_user]
+
+    [resources.install_dir]
+    dir = "/opt/yunohost/__APP__"
+
+    [resources.data_dir]
+
+    [resources.permissions]
+    main.url = "/"
+    main.auth_header = false
+
+    [resources.ports]
+    # Stoat services bind to hard-coded ports upstream
+    api.default = 14702
+    api.fixed = true
+    events.default = 14703
+    events.fixed = true
+    autumn.default = 14704
+    autumn.fixed = true
+    january.default = 14705
+    january.fixed = true
+    gifbox.default = 14706
+    gifbox.fixed = true
+    ingress.default = 8500
+    ingress.fixed = true
+    # Internal, freely allocated
+    livekit.default = 7880
+    s3.default = 3900
+    s3rpc.default = 3901
+    # Public WebRTC ports (opened in the firewall)
+    rtctcp.default = 7881
+    rtctcp.exposed = "TCP"
+    rtcudp.default = 7882
+    rtcudp.exposed = "UDP"
+
+    [resources.apt]
+    packages = ["redis-server", "rabbitmq-server", "curl", "jq", "zstd", "openssl"]
