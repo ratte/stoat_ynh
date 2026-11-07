@@ -176,12 +176,12 @@ _stoat_generate_secrets() {
         ynh_app_setting_set --key=vapid_public_key --value="$vapid_public_key"
     fi
     if [ -z "${files_encryption_key:-}" ]; then
-        files_encryption_key="$(openssl rand -base64 32)"
+        files_encryption_key="$(printf '%s' "$(ynh_string_random --length=32)" | base64 -w0)"
         ynh_app_setting_set --key=files_encryption_key --value="$files_encryption_key"
     fi
     if [ -z "${livekit_key:-}" ]; then
-        livekit_key="$(openssl rand -hex 6)"
-        livekit_secret="$(openssl rand -hex 24)"
+        livekit_key="$(ynh_string_random --length=12 --filter='a-f0-9')"
+        livekit_secret="$(ynh_string_random --length=48 --filter='a-f0-9')"
         ynh_app_setting_set --key=livekit_key --value="$livekit_key"
         ynh_app_setting_set --key=livekit_secret --value="$livekit_secret"
     fi
@@ -190,12 +190,12 @@ _stoat_generate_secrets() {
         ynh_app_setting_set --key=rabbit_pwd --value="$rabbit_pwd"
     fi
     if [ -z "${garage_rpc_secret:-}" ]; then
-        garage_rpc_secret="$(openssl rand -hex 32)"
+        garage_rpc_secret="$(ynh_string_random --length=64 --filter='a-f0-9')"
         ynh_app_setting_set --key=garage_rpc_secret --value="$garage_rpc_secret"
     fi
     if [ -z "${s3_key_id:-}" ]; then
-        s3_key_id="GK$(openssl rand -hex 12)"
-        s3_secret_key="$(openssl rand -hex 32)"
+        s3_key_id="GK$(ynh_string_random --length=24 --filter='a-f0-9')"
+        s3_secret_key="$(ynh_string_random --length=64 --filter='a-f0-9')"
         ynh_app_setting_set --key=s3_key_id --value="$s3_key_id"
         ynh_app_setting_set --key=s3_secret_key --value="$s3_secret_key"
     fi

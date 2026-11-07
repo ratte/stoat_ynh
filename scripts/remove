@@ -27,8 +27,6 @@ if command -v rabbitmqctl >/dev/null && rabbitmqctl -q list_users 2>/dev/null | 
     rabbitmqctl -q delete_user "$app"
 fi
 
-ynh_safe_rm "/var/log/$app"
-
 #=================================================
 # END OF SCRIPT
 #=================================================

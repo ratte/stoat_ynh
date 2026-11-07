@@ -60,7 +60,6 @@ ram.runtime = "1500M"
     [resources.system_user]
 
     [resources.install_dir]
-    dir = "/opt/yunohost/__APP__"
 
     [resources.data_dir]
 
