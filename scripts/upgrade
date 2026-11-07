@@ -29,7 +29,7 @@ _stoat_setup_rabbitmq
 #=================================================
 # APP SOURCES
 #=================================================
-if ynh_app_upstream_version_changed || [ ! -x "$install_dir/bin/stoat-api" ]; then
+if ynh_app_upstream_version_changed || [ ! -x "$install_dir/bin/stoat-api" ] || [ ! -d "$install_dir/lib" ]; then
     ynh_script_progression "Upgrading Stoat (this takes a while)..."
     _stoat_setup_sources
 fi

@@ -10,6 +10,9 @@ Communicate with the user in German.
 - Garage (S3) for uploads, bucket `revolt-uploads`, binary from `dxflrs/garage:v2.3.0`
 - LiveKit from `ghcr.io/stoatchat/livekit-server:v1.9.14`, single-port mode (TCP 7881, UDP 7882)
 - Stoat binaries + ffmpeg/ffprobe from `ghcr.io/stoatchat/*:v0.15.5`, web client from `ghcr.io/stoatchat/for-web:4017c18`
+- Stoat images are distroless Debian 13: binaries at `/home/nonroot/revolt-*`, need glibc 2.39 → their
+  `usr/lib/<triplet>` is shipped as `$install_dir/lib` and `patchelf` points loader + RPATH there
+- `for-web` exists only for amd64 (static, fetched as amd64 on every arch)
 - Images are fetched by `_oci_extract` in `scripts/_common.sh` (registry v2 API, layers sha256-verified),
   because YunoHost's vendored docker-image-extract only supports Docker Hub (PR YunoHost/yunohost#2293 pending)
 - Web client: placeholders `__VITE_*__` in the built dist are replaced by `_stoat_build_web` (mirrors upstream docker/inject.js)
@@ -24,7 +27,7 @@ Communicate with the user in German.
 - Logs on the VM: `/var/log/stoat/*.log`, `journalctl -u stoat-*`
 
 ## Unverified assumptions – check first
-1. Images exist for arm64; binary paths: `revolt-*` at image root, `livekit-server`, `garage` (found via `find`)
+1. `/livekit-server` and `/garage` are statically linked (stoat images confirmed for amd64+arm64)
 2. Garage v2 CLI in `_stoat_setup_garage`: `node id -q`, `status` showing "NO ROLE ASSIGNED", `layout assign/apply`, `key import --yes`, `bucket allow`
 3. MongoDB database name `revolt`; Revolt.toml keys `key`/`secret` under `[api.livekit.nodes.worldwide]`
 4. Web placeholder for video toggle `__VITE_CFG_ENABLE_VIDEO__` (inject.js source not seen); empty `__VITE_HOST__` is OK

@@ -92,4 +92,4 @@ ram.runtime = "1500M"
     rtcudp.exposed = "UDP"
 
     [resources.apt]
-    packages = ["redis-server", "rabbitmq-server", "curl", "jq", "zstd", "openssl"]
+    packages = ["redis-server", "rabbitmq-server", "curl", "jq", "zstd", "openssl", "patchelf"]

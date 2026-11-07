@@ -36,14 +36,28 @@ _oci_arch() {
     esac
 }
 
+# Multiarch triplet and dynamic loader name of the upstream (Debian-based) images
+_oci_triplet() {
+    case "$YNH_ARCH" in
+        amd64) echo "x86_64-linux-gnu" ;;
+        arm64) echo "aarch64-linux-gnu" ;;
+    esac
+}
+_oci_loader() {
+    case "$YNH_ARCH" in
+        amd64) echo "ld-linux-x86-64.so.2" ;;
+        arm64) echo "ld-linux-aarch64.so.1" ;;
+    esac
+}
+
 # Download an OCI/Docker image from a registry and unpack its filesystem.
 # Every layer is verified against its sha256 digest from the manifest.
 #
-# usage: _oci_extract <registry> <image> <tag> <dest_dir>
+# usage: _oci_extract <registry> <image> <tag> <dest_dir> [arch]
 _oci_extract() {
     local registry="$1" image="$2" ref="$3" dest="$4"
     local arch api token_url token manifest digest layer tmp
-    arch="$(_oci_arch)"
+    arch="${5:-$(_oci_arch)}"
 
     if [ "$registry" = "docker.io" ]; then
         api="https://registry-1.docker.io"
@@ -95,45 +109,71 @@ _oci_extract() {
 
 # Download all upstream components into $install_dir
 _stoat_setup_sources() {
-    local work comp bin
+    local work comp bin triplet loader libdir
     work="$(mktemp -d)"
-    mkdir -p "$install_dir/bin" "$install_dir/web.new"
+    triplet="$(_oci_triplet)"
+    loader="$(_oci_loader)"
+    libdir="$install_dir/lib"
+    ynh_safe_rm "$install_dir/bin.new"
+    ynh_safe_rm "$install_dir/lib.new"
+    ynh_safe_rm "$install_dir/web.new"
+    mkdir -p "$install_dir/bin.new" "$install_dir/lib.new" "$install_dir/web.new"
 
+    # The Stoat binaries are built on Debian 13 (glibc >= 2.39, libdav1d7) while
+    # YunoHost 12 runs on Debian 12: ship the images' runtime libraries along and
+    # point the binaries' loader and RPATH to them.
     for comp in "${!stoat_images[@]}"; do
         ynh_print_info "Fetching $comp ($stoat_version)..."
         _oci_extract "ghcr.io" "${stoat_images[$comp]}" "$stoat_version" "$work/$comp"
-        bin="$(find "$work/$comp" -maxdepth 1 -type f -name 'revolt-*' | head -n1)"
+        bin="$(find "$work/$comp/home/nonroot" -maxdepth 1 -type f -name 'revolt-*' 2>/dev/null | head -n1)"
         [ -n "$bin" ] || ynh_die "No revolt-* binary found in image ${stoat_images[$comp]}"
-        install -m 0755 "$bin" "$install_dir/bin/stoat-$comp"
+        [ -f "$work/$comp/usr/lib/$triplet/$loader" ] || ynh_die "No $loader found in image ${stoat_images[$comp]}"
+        cp -an "$work/$comp/usr/lib/$triplet/." "$install_dir/lib.new/"
+        install -m 0755 "$bin" "$install_dir/bin.new/stoat-$comp"
+        patchelf --set-interpreter "$libdir/$loader" --force-rpath --set-rpath "$libdir" \
+            "$install_dir/bin.new/stoat-$comp"
         if [ "$comp" = "autumn" ]; then
-            install -m 0755 "$work/$comp/usr/local/bin/ffmpeg" "$install_dir/bin/ffmpeg"
-            install -m 0755 "$work/$comp/usr/local/bin/ffprobe" "$install_dir/bin/ffprobe"
+            # statically linked
+            install -m 0755 "$work/$comp/usr/local/bin/ffmpeg" "$install_dir/bin.new/ffmpeg"
+            install -m 0755 "$work/$comp/usr/local/bin/ffprobe" "$install_dir/bin.new/ffprobe"
         fi
         ynh_safe_rm "$work/$comp"
     done
 
     ynh_print_info "Fetching LiveKit ($livekit_ref)..."
     _oci_extract "ghcr.io" "stoatchat/livekit-server" "$livekit_ref" "$work/livekit"
-    bin="$(find "$work/livekit" -type f -name 'livekit-server' -perm -u+x | head -n1)"
-    [ -n "$bin" ] || ynh_die "livekit-server binary not found"
-    install -m 0755 "$bin" "$install_dir/bin/livekit-server"
+    [ -f "$work/livekit/livekit-server" ] || ynh_die "livekit-server binary not found"
+    install -m 0755 "$work/livekit/livekit-server" "$install_dir/bin.new/livekit-server"
     ynh_safe_rm "$work/livekit"
 
     ynh_print_info "Fetching Garage ($garage_ref)..."
     _oci_extract "docker.io" "dxflrs/garage" "$garage_ref" "$work/garage"
-    bin="$(find "$work/garage" -type f -name 'garage' -perm -u+x | head -n1)"
-    [ -n "$bin" ] || ynh_die "garage binary not found"
-    install -m 0755 "$bin" "$install_dir/bin/garage"
+    [ -f "$work/garage/garage" ] || ynh_die "garage binary not found"
+    install -m 0755 "$work/garage/garage" "$install_dir/bin.new/garage"
     ynh_safe_rm "$work/garage"
 
+    # The web client is static and only published for amd64
     ynh_print_info "Fetching web client ($stoat_web_ref)..."
-    _oci_extract "ghcr.io" "stoatchat/for-web" "$stoat_web_ref" "$work/web"
+    _oci_extract "ghcr.io" "stoatchat/for-web" "$stoat_web_ref" "$work/web" "amd64"
     [ -f "$work/web/app/dist/index.html" ] || ynh_die "Web client dist not found in image"
     cp -a "$work/web/app/dist/." "$install_dir/web.new/"
     ynh_safe_rm "$work"
 
+    local dir
+    for dir in bin lib; do
+        ynh_safe_rm "$install_dir/$dir"
+        mv "$install_dir/$dir.new" "$install_dir/$dir"
+    done
     ynh_safe_rm "$install_dir/web.dist"
     mv "$install_dir/web.new" "$install_dir/web.dist"
+
+    # Every bundled library must resolve from $install_dir/lib
+    for comp in "${!stoat_images[@]}"; do
+        if "$libdir/$loader" --list "$install_dir/bin/stoat-$comp" | grep -q "not found"; then
+            "$libdir/$loader" --list "$install_dir/bin/stoat-$comp" >&2
+            ynh_die "Missing libraries for stoat-$comp"
+        fi
+    done
 }
 
 # Render the web client from the pristine dist with this instance's URLs

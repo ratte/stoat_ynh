@@ -34,12 +34,15 @@ Vagrant.configure("2") do |config|
       curl -fsSL https://install.yunohost.org | bash -s -- -a
     fi
     if ! yunohost domain list --output-as json | grep -q '"stoat.test"'; then
-      yunohost tools postinstall --domain stoat.test --username admin \
+      yunohost tools postinstall --domain stoat.test --username stoatadmin \
         --fullname "Test Admin" --password 'Stoat-Test-1234' \
         --ignore-dyndns --force-diskspace
     fi
     yunohost domain list --output-as json | grep -q '"chat.stoat.test"' \
       || yunohost domain add chat.stoat.test
-    echo "YunoHost ready: admin / Stoat-Test-1234"
+    # YunoHost's sshd_config only admits "AllowGroups ... admins root";
+    # without this, vagrant ssh/rsync is locked out after postinstall
+    usermod -aG root vagrant
+    echo "YunoHost ready: stoatadmin / Stoat-Test-1234"
   SHELL
 end
