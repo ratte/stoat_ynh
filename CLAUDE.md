@@ -30,7 +30,8 @@ Communicate with the user in German.
 1. `/livekit-server` and `/garage` are statically linked (stoat images confirmed for amd64+arm64)
 2. Garage v2 CLI in `_stoat_setup_garage`: `node id -q`, `status` showing "NO ROLE ASSIGNED", `layout assign/apply`, `key import --yes`, `bucket allow`
 3. MongoDB database name `revolt`; Revolt.toml keys `key`/`secret` under `[api.livekit.nodes.worldwide]`
-4. Web placeholder for video toggle `__VITE_CFG_ENABLE_VIDEO__` (inject.js source not seen); empty `__VITE_HOST__` is OK
+4. (verified) for-web has no video flag, video is switched in Revolt.toml; `__VITE_HOST__` must be the domain
+   (empty falls back to stoat.chat); unset placeholders become `void 0` like inject.js
 5. `Revolt.overrides.toml` is read in production
 6. autumn finds ffmpeg via PATH (verified: bonfire honours `HOST`; delta/autumn/january/gifbox/voice-ingress
    hard-code 0.0.0.0:<port>, env cannot change it)

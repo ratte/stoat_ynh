@@ -180,22 +180,27 @@ _stoat_setup_sources() {
 _stoat_build_web() {
     local web="$install_dir/web"
     local base="https://$domain"
-    local video="false"
-    [ "${enable_video:-0}" -eq 1 ] && video="true"
 
     ynh_safe_rm "$web"
     cp -a "$install_dir/web.dist" "$web"
 
-    find "$web" -type f \( -name '*.js' -o -name '*.mjs' -o -name '*.html' -o -name '*.json' -o -name '*.webmanifest' -o -name '*.css' \) -print0 \
+    # Mirrors upstream for-web docker/inject.js: placeholders in .js/.html only,
+    # unset values become `void 0` so the client falls back to its defaults.
+    # VITE_HOST must be set: otherwise the client treats stoat.chat as its instance.
+    # (Video is switched in Revolt.toml, the web client has no flag for it.)
+    find "$web" -type f \( -name '*.js' -o -name '*.html' \) -print0 \
         | xargs -0 -r sed -i \
+            -e "s#__VITE_HOST__#$domain#g" \
             -e "s#__VITE_API_URL__#$base/api#g" \
             -e "s#__VITE_WS_URL__#wss://$domain/ws#g" \
             -e "s#__VITE_MEDIA_URL__#$base/autumn#g" \
             -e "s#__VITE_PROXY_URL__#$base/january#g" \
             -e "s#__VITE_GIFBOX_URL__#$base/gifbox#g" \
-            -e "s#__VITE_CFG_ENABLE_VIDEO__#$video#g" \
-            -e "s#__VITE_HOST__##g" \
-            -e "s#__VITE_RNNOISE_WORKLET_CDN_URL__##g"
+            -e 's#"__VITE_RNNOISE_WORKLET_CDN_URL__"#void 0#g'
+
+    if grep -rqE "__VITE_(HOST|API_URL|WS_URL|MEDIA_URL|PROXY_URL|GIFBOX_URL|RNNOISE_WORKLET_CDN_URL)__" "$web"; then
+        ynh_die "Some web client placeholders could not be replaced"
+    fi
 
     echo -n "{\"api\":\"$base/api\"}" > "$install_dir/stoat.json"
 
